@@ -90,4 +90,12 @@ module Marginalia
       Marginalia::Comment.clear!
     end
   end
+
+  module SidekiqWorkerInstrumentation
+    def perform(*attrs)
+      Marginalia::Comment.update_job!(self)
+      super(*attrs)
+      Marginalia::Comment.clear_job!
+    end
+  end
 end

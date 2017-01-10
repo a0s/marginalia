@@ -17,6 +17,10 @@ module Marginalia
         ActiveSupport.on_load :active_job do
           Marginalia::Railtie.insert_into_active_job
         end
+
+        ActiveSupport.on_load :after_initialize do
+          Marginalia::Railtie.insert_into_sidekiq_workers
+        end
       end
     end
   end
@@ -26,6 +30,18 @@ module Marginalia
       insert_into_active_record
       insert_into_action_controller
       insert_into_active_job
+      insert_into_sidekiq_workers
+    end
+
+    def self.insert_into_sidekiq_workers
+      if defined? Sidekiq::Worker
+        # Will only work for environments that eager load classes.
+        ObjectSpace.each_object(Class).select { |c| c.included_modules.include?(Sidekiq::Worker) }.each do |klass|
+          klass.class_eval do
+            klass.send(:prepend, SidekiqWorkerInstrumentation)
+          end
+        end
+      end
     end
 
     def self.insert_into_active_job
